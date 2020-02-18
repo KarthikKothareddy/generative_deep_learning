@@ -156,7 +156,12 @@ class VariationalAutoencoder():
             return  r_loss + kl_loss
 
         optimizer = Adam(lr=learning_rate)
-        self.model.compile(optimizer=optimizer, loss = vae_loss,  metrics = [vae_r_loss, vae_kl_loss])
+        self.model.compile(
+            optimizer=optimizer, loss=vae_loss,  
+            metrics=[vae_r_loss, vae_kl_loss],
+            # https://github.com/tensorflow/probability/issues/519 
+            experimental_run_tf_function=False
+        )
 
 
     def save(self, folder):
@@ -192,25 +197,35 @@ class VariationalAutoencoder():
         custom_callback = CustomCallback(run_folder, print_every_n_batches, initial_epoch, self)
         lr_sched = step_decay_schedule(initial_lr=self.learning_rate, decay_factor=lr_decay, step_size=1)
         
-        checkpoint_filepath=os.path.join(run_folder, "weights/weights-{epoch:03d}-{loss:.2f}.h5")
-        checkpoint1 = ModelCheckpoint(checkpoint_filepath, save_weights_only = True, verbose=1)
-        checkpoint2 = ModelCheckpoint(os.path.join(run_folder, 'weights/weights.h5'), save_weights_only = True, verbose=1)
+        checkpoint_filepath = os.path.join(run_folder, "weights/weights-{epoch:03d}-{loss:.2f}.h5")
+        checkpoint1 = ModelCheckpoint(
+            filepath=checkpoint_filepath, 
+            save_weights_only=True, 
+            save_freq='epoch',
+            verbose=1
+        )
+        checkpoint2 = ModelCheckpoint(
+            filepath=os.path.join(run_folder, 'weights/weights.h5'),
+            save_weights_only=True, 
+            save_freq='epoch',
+            verbose=1
+        )
 
         callbacks_list = [checkpoint1, checkpoint2, custom_callback, lr_sched]
 
         self.model.fit(     
-            x_train
-            , x_train
-            , batch_size = batch_size
-            , shuffle = True
-            , epochs = epochs
-            , initial_epoch = initial_epoch
-            , callbacks = callbacks_list
+            x_train,
+            x_train,
+            batch_size=batch_size,
+            shuffle=True,
+            epochs=epochs,
+            initial_epoch=initial_epoch,
+            callbacks=callbacks_list
         )
 
 
 
-    def train_with_generator(self, data_flow, epochs, steps_per_epoch, run_folder, print_every_n_batches = 100, initial_epoch = 0, lr_decay = 1, ):
+    def train_with_generator(self, data_flow, epochs, steps_per_epoch, run_folder, print_every_n_batches=100, initial_epoch = 0, lr_decay=1, ):
 
         custom_callback = CustomCallback(run_folder, print_every_n_batches, initial_epoch, self)
         lr_sched = step_decay_schedule(initial_lr=self.learning_rate, decay_factor=lr_decay, step_size=1)
@@ -224,17 +239,26 @@ class VariationalAutoencoder():
         self.model.save_weights(os.path.join(run_folder, 'weights/weights.h5'))
                 
         self.model.fit_generator(
-            data_flow
-            , shuffle = True
-            , epochs = epochs
-            , initial_epoch = initial_epoch
-            , callbacks = callbacks_list
-            , steps_per_epoch=steps_per_epoch 
-            )
+            data_flow,
+            shuffle = True,
+            epochs = epochs,
+            initial_epoch = initial_epoch,
+            callbacks = callbacks_list,
+            steps_per_epoch=steps_per_epoch
+        )
 
 
     
     def plot_model(self, run_folder):
-        plot_model(self.model, to_file=os.path.join(run_folder ,'viz/model.png'), show_shapes = True, show_layer_names = True)
-        plot_model(self.encoder, to_file=os.path.join(run_folder ,'viz/encoder.png'), show_shapes = True, show_layer_names = True)
-        plot_model(self.decoder, to_file=os.path.join(run_folder ,'viz/decoder.png'), show_shapes = True, show_layer_names = True)
+        plot_model(
+            self.model, to_file=os.path.join(run_folder ,'viz/model.png'), 
+            show_shapes=True, show_layer_names=True
+        )
+        plot_model(
+            self.encoder, to_file=os.path.join(run_folder ,'viz/encoder.png'), 
+            show_shapes=True, show_layer_names=True
+        )
+        plot_model(
+            self.decoder, to_file=os.path.join(run_folder ,'viz/decoder.png'), 
+            show_shapes=True, show_layer_names=True
+        )
